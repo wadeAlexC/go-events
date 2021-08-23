@@ -8,38 +8,59 @@ import (
 	"github.com/wadeAlexC/go-events/events"
 )
 
-func main() {
-	thing := events.NewEmitter()
+type Thing struct {
+	*events.Emitter
+	name string
+	val  uint64
+}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-
-	a := uint64(1)
-
-	for i := 0; i < 5; i++ {
-		thing.On("ready", func(val uint64) {
-			fmt.Printf("CB: %d\n", val)
-			fmt.Printf("Val of a: %d\n", a)
-			a++
-		})
+func NewThing() *Thing {
+	return &Thing{
+		Emitter: events.NewEmitter(),
 	}
+}
 
-	thing.On("ready", func(val uint64) {
-		if a > 5 {
-			cancel()
+func (t *Thing) start(name string, val uint64) {
+	t.name = name
+	t.val = val
+	t.Emit("named", t.name)
+	t.Emit("valued", t.val)
+	t.Emit("close")
+}
+
+func (t *Thing) prepare() {
+
+	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			t.Emit("ready", "alex", uint64(5))
+			return
 		}
+	}
+}
+
+func main() {
+	thing := NewThing()
+
+	thing.On("ready", thing.start)
+
+	thing.On("named", func(name string) {
+		fmt.Printf("Thing named %s\n", name)
 	})
 
-	err := thing.Emit("ready", uint64(5))
+	thing.On("valued", func(val uint64) {
+		fmt.Printf("Thing named %d\n", val)
+	})
 
-	if err != nil {
-		fmt.Printf("Error at Emit: %v\n", err)
-	}
+	thing.On("close", func() {
+		fmt.Printf("Thing stopped!\n")
+	})
 
-	err = thing.Emit("ready", uint64(6))
+	thing.prepare()
 
-	if err != nil {
-		fmt.Printf("Error at Emit: %v\n", err)
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 
 	for {
 		select {
