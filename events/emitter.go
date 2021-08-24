@@ -11,7 +11,7 @@ type EventEmitter interface {
 	Once(topic string, handler interface{})
 
 	Emit(topic string, args ...interface{})
-	EmitAsync(topic string, args ...interface{})
+	EmitSync(topic string, args ...interface{})
 }
 
 type Emitter struct {
@@ -73,15 +73,15 @@ func (e *Emitter) Once(topic string, handler interface{}) {
 // 1. The types and positions of args must exactly match the
 //    types and positions of the callback's input parameters.
 
-// Emit fires callbacks synchronously, waiting for each
-// callback to return before firing the next one.
+// Emit fires callbacks asynchronously, spawning a goroutine
+// for each callback.
 func (e *Emitter) Emit(topic string, args ...interface{}) {
 	e.callHandlers(false, topic, args...)
 }
 
-// Emit fires callbacks asynchronously, spawning a goroutine
-// for each callback.
-func (e *Emitter) EmitAsync(topic string, args ...interface{}) {
+// EmitSync fires callbacks synchronously, waiting for each
+// callback to return before firing the next one.
+func (e *Emitter) EmitSync(topic string, args ...interface{}) {
 	e.callHandlers(true, topic, args...)
 }
 
@@ -135,7 +135,7 @@ func (e *Emitter) addHandler(doOnce bool, topic string, handler interface{}) {
 	})
 }
 
-func (e *Emitter) callHandlers(doAsync bool, topic string, args ...interface{}) {
+func (e *Emitter) callHandlers(doSync bool, topic string, args ...interface{}) {
 	e.mu.Lock()
 	// Emitting to no listeners! Do nothing.
 	if _, exists := e.listeners[topic]; !exists {
@@ -174,10 +174,10 @@ func (e *Emitter) callHandlers(doAsync bool, topic string, args ...interface{}) 
 	handlers.mu.Unlock()
 
 	// Call each function with the input args
-	if doAsync {
-		callFuncsAsync(funcs, inArgs)
-	} else {
+	if doSync {
 		callFuncsSync(funcs, inArgs)
+	} else {
+		callFuncsAsync(funcs, inArgs)
 	}
 }
 
