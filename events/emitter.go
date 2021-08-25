@@ -13,7 +13,7 @@ type EventEmitter interface {
 	Emit(topic string, args ...interface{})
 	EmitSync(topic string, args ...interface{})
 
-	RemoveAllListeners(topic string)
+	RemoveAllListeners()
 }
 
 type Emitter struct {
@@ -87,12 +87,12 @@ func (e *Emitter) EmitSync(topic string, args ...interface{}) {
 	e.callHandlers(true, topic, args...)
 }
 
-// RemoveAllListeners removes all the listeners from the passed-in topic
-func (e *Emitter) RemoveAllListeners(topic string) {
+// RemoveAllListeners removes all the listeners for all topics
+func (e *Emitter) RemoveAllListeners() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	delete(e.listeners, topic)
+	e.listeners = make(map[string]*Handlers)
 }
 
 func (e *Emitter) addHandler(doOnce bool, topic string, handler interface{}) {
