@@ -12,6 +12,8 @@ type EventEmitter interface {
 
 	Emit(topic string, args ...interface{})
 	EmitSync(topic string, args ...interface{})
+
+	RemoveAllListeners(topic string)
 }
 
 type Emitter struct {
@@ -83,6 +85,14 @@ func (e *Emitter) Emit(topic string, args ...interface{}) {
 // callback to return before firing the next one.
 func (e *Emitter) EmitSync(topic string, args ...interface{}) {
 	e.callHandlers(true, topic, args...)
+}
+
+// RemoveAllListeners removes all the listeners from the passed-in topic
+func (e *Emitter) RemoveAllListeners(topic string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	delete(e.listeners, topic)
 }
 
 func (e *Emitter) addHandler(doOnce bool, topic string, handler interface{}) {
