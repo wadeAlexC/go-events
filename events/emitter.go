@@ -153,7 +153,7 @@ func (e *Emitter) callHandlers(doSync bool, topic string, args ...interface{}) {
 	e.mu.Lock()
 	// Emitting to no listeners! Do nothing.
 	if _, exists := e.listeners[topic]; !exists {
-		fmt.Printf("T[%s] has no listeners to emit to.\n", topic)
+		// fmt.Printf("T[%s] has no listeners to emit to.\n", topic)
 		e.mu.Unlock()
 		return
 	}
