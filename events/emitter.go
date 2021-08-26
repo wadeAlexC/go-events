@@ -9,6 +9,9 @@ import (
 type EventEmitter interface {
 	On(topic string, handler interface{})
 	Once(topic string, handler interface{})
+	// TODO: impl
+	// Acts like a call to Once + RemoveAllListeners
+	// Final(topic string, handler interface{})
 
 	Emit(topic string, args ...interface{})
 	EmitSync(topic string, args ...interface{})
@@ -114,6 +117,7 @@ func (e *Emitter) addHandler(doOnce bool, topic string, handler interface{}) {
 
 		// Add the input types for the handler function
 		for i := 0; i < cbType.NumIn(); i++ {
+			// fmt.Printf("Arg %d has kind: %s\n", i, cbType.In(i).Kind())
 			inTypes[i] = cbType.In(i)
 		}
 
@@ -149,7 +153,7 @@ func (e *Emitter) callHandlers(doSync bool, topic string, args ...interface{}) {
 	e.mu.Lock()
 	// Emitting to no listeners! Do nothing.
 	if _, exists := e.listeners[topic]; !exists {
-		fmt.Printf("T[%s] has no listeners to emit to", topic)
+		fmt.Printf("T[%s] has no listeners to emit to.\n", topic)
 		e.mu.Unlock()
 		return
 	}
@@ -169,8 +173,17 @@ func (e *Emitter) callHandlers(doSync bool, topic string, args ...interface{}) {
 
 	for i, arg := range args {
 		t := reflect.TypeOf(arg)
-		if t.Kind() != handlers.in[i].Kind() {
-			panicF("T[%s] invalid argument at position %d. Expected %s; got %s", topic, i, handlers.in[i].Kind(), t.Kind())
+
+		if handlers.in[i].Kind() == reflect.Interface {
+			// If the handler parameter is an interface, make sure our arg implements it.
+			if !t.Implements(handlers.in[i]) {
+				panicF("T[%s] invalid argument at position %d. Expected %s to implement %s", topic, i, t.Kind(), handlers.in[i].String())
+			}
+		} else {
+			// Otherwise, make sure the parameter / arg kinds match.
+			if t.Kind() != handlers.in[i].Kind() {
+				panicF("T[%s] invalid argument at position %d. Expected %s; got %s", topic, i, handlers.in[i].Kind(), t.Kind())
+			}
 		}
 
 		inArgs[i] = reflect.ValueOf(arg)
